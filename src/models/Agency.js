@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 
 const agencySchema = new mongoose.Schema({
   name: { type: String, required: true }, // ex: "Autoclean Paris 15", "Autoclean Lyon"
+  phone: { type: String, required: true },
   address: {
     street: { type: String, required: true },
     city: { type: String, required: true },
     zipCode: { type: String, required: true }
   },
-  phone: { type: String, required: true },
   // Horaires d'ouverture par jour (0 = Dimanche, 6 = Samedi)
   openingHours: [{
     dayOfWeek: { type: Number, required: true, min: 0, max: 6 },

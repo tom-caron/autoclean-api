@@ -4,6 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
+const agencyRoutes = require('./src/routes/agencyRoutes');
 const { errorHandler } = require('./src/middlewares/errorMiddleware');
 
 // Chargement des variables d'environnement
@@ -20,6 +21,7 @@ app.use(cors()); // Autorise les requêtes de tes futurs fronts Vue.js
 app.use(express.json()); // Permet à ton API de lire les données JSON (formulaires, etc.)
 
 app.use('/api/auth', authRoutes);
+app.use('/api/agencies', agencyRoutes);
 
 app.use(errorHandler);
 

@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const bcrypt = require('bcrypt');
 const Role = require('../models/Role');
 const User = require('../models/User');
-const Agency = require('../models/Agency'); // N'oublie pas d'importer le modèle Agency !
+const Agency = require('../models/Agency');
 
 dotenv.config();
 
@@ -12,8 +12,7 @@ const seedDatabase = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connecté à MongoDB pour le seeding...');
 
-    // --- 1. NETTOYAGE (Optionnel mais recommandé pour un seed) ---
-    // On vide les agences et les utilisateurs (sauf si tu veux les garder, mais c'est mieux pour repartir de zéro)
+    // --- 1. NETTOYAGE ---
     await Agency.deleteMany({});
     await User.deleteMany({});
     console.log('🧹 Base de données nettoyée (Agences et Users).');
@@ -31,12 +30,12 @@ const seedDatabase = async () => {
     }
     console.log('✅ Rôles initialisés !');
 
-    // Récupération des IDs des rôles pour la suite
+    // Récupération des IDs des rôles
     const customerRole = await Role.findOne({ name: 'Customer' });
     const employeeRole = await Role.findOne({ name: 'Employee' });
+    const managerRole = await Role.findOne({ name: 'Manager' }); // <-- AJOUT ICI
     const superAdminRole = await Role.findOne({ name: 'SuperAdmin' });
 
-    // Hachage du mot de passe commun ('password123') une seule fois pour aller plus vite
     const salt = await bcrypt.genSalt(10);
     const commonPassword = await bcrypt.hash('password123', salt);
 
@@ -56,7 +55,6 @@ const seedDatabase = async () => {
     const cities = ['Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Lille'];
     const createdAgencies = [];
 
-    // Horaires standards : Lundi au Samedi (1 à 6), 08h-18h. Dimanche (0) fermé.
     const defaultHours = Array.from({ length: 7 }, (_, i) => ({
       dayOfWeek: i,
       isOpen: i !== 0, 
@@ -76,26 +74,45 @@ const seedDatabase = async () => {
     }
     console.log(`✅ ${createdAgencies.length} Agences créées !`);
 
-    // --- 5. EMPLOYÉS (5 par agence) ---
+    // --- 5. MANAGERS ET EMPLOYÉS ---
+    let managerCount = 0;
     let employeeCount = 0;
+    
     for (const agency of createdAgencies) {
+      const cityName = agency.name.split(' ')[1]; // ex: Paris
+
+      // Création du Manager pour cette agence <-- AJOUT ICI
+      const manager = new User({
+        firstName: 'Manager',
+        lastName: cityName,
+        email: `manager.${cityName.toLowerCase()}@autoclean.fr`, // ex: manager.paris@autoclean.fr
+        password: commonPassword,
+        phone: `0622222222`,
+        role: managerRole._id,
+        agency: agency._id // Rattaché à son agence !
+      });
+      await manager.save();
+      managerCount++;
+
+      // Création des 5 employés pour cette agence
       for (let i = 1; i <= 5; i++) {
         const employee = new User({
           firstName: `Employé${i}`,
-          lastName: agency.name.split(' ')[1], // ex: Paris
-          email: `employe${i}.${agency.name.split(' ')[1].toLowerCase()}@autoclean.fr`,
+          lastName: cityName, 
+          email: `employe${i}.${cityName.toLowerCase()}@autoclean.fr`,
           password: commonPassword,
           phone: `061111111${i}`,
           role: employeeRole._id,
-          agency: agency._id // On relie l'employé à son agence !
+          agency: agency._id 
         });
         await employee.save();
         employeeCount++;
       }
     }
-    console.log(`✅ ${employeeCount} Employés créés (ex: employe1.paris@autoclean.fr / password123).`);
+    console.log(`✅ ${managerCount} Managers créés (ex: manager.paris@autoclean.fr / password123).`);
+    console.log(`✅ ${employeeCount} Employés créés.`);
 
-    // --- 6. CLIENTS (5 faux clients) ---
+    // --- 6. CLIENTS ---
     for (let i = 1; i <= 5; i++) {
       const customer = new User({
         firstName: `Client${i}`,
@@ -107,9 +124,9 @@ const seedDatabase = async () => {
       });
       await customer.save();
     }
-    console.log('✅ 5 Clients créés (ex: client1@test.fr / password123).');
+    console.log('✅ 5 Clients créés.');
 
-    console.log('🌱 Seeding terminé avec succès ! Tu es prêt pour les tests.');
+    console.log('🌱 Seeding terminé avec succès !');
     process.exit(0);
 
   } catch (error) {
