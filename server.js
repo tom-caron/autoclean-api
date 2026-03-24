@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const agencyRoutes = require('./src/routes/agencyRoutes');
+const prestationRoutes = require('./src/routes/prestationRoutes');
 const { errorHandler } = require('./src/middlewares/errorMiddleware');
 
 // Chargement des variables d'environnement
@@ -22,6 +23,7 @@ app.use(express.json()); // Permet à ton API de lire les données JSON (formula
 
 app.use('/api/auth', authRoutes);
 app.use('/api/agencies', agencyRoutes);
+app.use('/api/prestations', prestationRoutes);
 
 app.use(errorHandler);
 

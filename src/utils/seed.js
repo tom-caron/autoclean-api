@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const Role = require('../models/Role');
 const User = require('../models/User');
 const Agency = require('../models/Agency');
+const Service = require('../models/Service'); // ➔ IMPORT DU MODÈLE PRESTATION
 
 dotenv.config();
 
@@ -13,9 +14,10 @@ const seedDatabase = async () => {
     console.log('✅ Connecté à MongoDB pour le seeding...');
 
     // --- 1. NETTOYAGE ---
+    await Service.deleteMany({}); // ➔ On nettoie aussi le catalogue
     await Agency.deleteMany({});
     await User.deleteMany({});
-    console.log('🧹 Base de données nettoyée (Agences et Users).');
+    console.log('🧹 Base de données nettoyée (Prestations, Agences, Users).');
 
     // --- 2. RÔLES ---
     const rolesData = [
@@ -30,10 +32,9 @@ const seedDatabase = async () => {
     }
     console.log('✅ Rôles initialisés !');
 
-    // Récupération des IDs des rôles
     const customerRole = await Role.findOne({ name: 'Customer' });
     const employeeRole = await Role.findOne({ name: 'Employee' });
-    const managerRole = await Role.findOne({ name: 'Manager' }); // <-- AJOUT ICI
+    const managerRole = await Role.findOne({ name: 'Manager' });
     const superAdminRole = await Role.findOne({ name: 'SuperAdmin' });
 
     const salt = await bcrypt.genSalt(10);
@@ -41,36 +42,26 @@ const seedDatabase = async () => {
 
     // --- 3. SUPER ADMIN ---
     const adminUser = new User({
-      firstName: 'Jean',
-      lastName: 'Patron',
-      email: 'admin@autoclean.fr',
-      password: commonPassword,
-      phone: '0600000000',
-      role: superAdminRole._id
+      firstName: 'Jean', lastName: 'Patron', email: 'admin@autoclean.fr',
+      password: commonPassword, phone: '0600000000', role: superAdminRole._id
     });
     await adminUser.save();
-    console.log('✅ SuperAdmin créé (admin@autoclean.fr / password123).');
+    console.log('✅ SuperAdmin créé.');
 
     // --- 4. AGENCES ---
     const cities = ['Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Lille'];
     const createdAgencies = [];
-
     const defaultHours = Array.from({ length: 7 }, (_, i) => ({
-      dayOfWeek: i,
-      isOpen: i !== 0, 
-      openTime: i !== 0 ? '08:00' : null,
-      closeTime: i !== 0 ? '18:00' : null
+      dayOfWeek: i, isOpen: i !== 0, openTime: i !== 0 ? '08:00' : null, closeTime: i !== 0 ? '18:00' : null
     }));
 
     for (const city of cities) {
       const agency = new Agency({
         name: `Autoclean ${city}`,
         address: { street: '10 rue du Lavage', city: city, zipCode: '00000' },
-        phone: '0100000000',
-        openingHours: defaultHours
+        phone: '0100000000', openingHours: defaultHours
       });
-      const savedAgency = await agency.save();
-      createdAgencies.push(savedAgency);
+      createdAgencies.push(await agency.save());
     }
     console.log(`✅ ${createdAgencies.length} Agences créées !`);
 
@@ -79,52 +70,49 @@ const seedDatabase = async () => {
     let employeeCount = 0;
     
     for (const agency of createdAgencies) {
-      const cityName = agency.name.split(' ')[1]; // ex: Paris
-
-      // Création du Manager pour cette agence <-- AJOUT ICI
+      const cityName = agency.name.split(' ')[1];
+      
       const manager = new User({
-        firstName: 'Manager',
-        lastName: cityName,
-        email: `manager.${cityName.toLowerCase()}@autoclean.fr`, // ex: manager.paris@autoclean.fr
-        password: commonPassword,
-        phone: `0622222222`,
-        role: managerRole._id,
-        agency: agency._id // Rattaché à son agence !
+        firstName: 'Manager', lastName: cityName, email: `manager.${cityName.toLowerCase()}@autoclean.fr`,
+        password: commonPassword, phone: `0622222222`, role: managerRole._id, agency: agency._id
       });
       await manager.save();
       managerCount++;
 
-      // Création des 5 employés pour cette agence
       for (let i = 1; i <= 5; i++) {
         const employee = new User({
-          firstName: `Employé${i}`,
-          lastName: cityName, 
-          email: `employe${i}.${cityName.toLowerCase()}@autoclean.fr`,
-          password: commonPassword,
-          phone: `061111111${i}`,
-          role: employeeRole._id,
-          agency: agency._id 
+          firstName: `Employé${i}`, lastName: cityName, email: `employe${i}.${cityName.toLowerCase()}@autoclean.fr`,
+          password: commonPassword, phone: `061111111${i}`, role: employeeRole._id, agency: agency._id 
         });
         await employee.save();
         employeeCount++;
       }
     }
-    console.log(`✅ ${managerCount} Managers créés (ex: manager.paris@autoclean.fr / password123).`);
-    console.log(`✅ ${employeeCount} Employés créés.`);
+    console.log(`✅ ${managerCount} Managers et ${employeeCount} Employés créés.`);
 
     // --- 6. CLIENTS ---
     for (let i = 1; i <= 5; i++) {
       const customer = new User({
-        firstName: `Client${i}`,
-        lastName: 'Test',
-        email: `client${i}@test.fr`,
-        password: commonPassword,
-        phone: `070000000${i}`,
-        role: customerRole._id
+        firstName: `Client${i}`, lastName: 'Test', email: `client${i}@test.fr`,
+        password: commonPassword, phone: `070000000${i}`, role: customerRole._id
       });
       await customer.save();
     }
     console.log('✅ 5 Clients créés.');
+
+    // --- 7. PRESTATIONS (NOUVEAU) ---
+    const prestationsData = [
+      { name: 'Lavage Extérieur Classique', description: 'Nettoyage carrosserie, jantes et séchage.', price: 15, durationMinutes: 20 },
+      { name: 'Lavage Intérieur', description: 'Aspiration complète, nettoyage des plastiques et vitres.', price: 25, durationMinutes: 30 },
+      { name: 'Lavage Premium Intégral', description: 'Formule complète intérieur + extérieur avec finition cire.', price: 50, durationMinutes: 60 },
+      { name: 'Rénovation Optiques', description: 'Polissage des phares ternis pour retrouver la transparence.', price: 40, durationMinutes: 45 },
+      { name: 'Désinfection Habitacle', description: 'Traitement antibactérien et anti-odeur à l\'ozone.', price: 30, durationMinutes: 20 }
+    ];
+
+    for (const prestation of prestationsData) {
+      await Service.create(prestation);
+    }
+    console.log(`✅ ${prestationsData.length} Prestations créées !`);
 
     console.log('🌱 Seeding terminé avec succès !');
     process.exit(0);
