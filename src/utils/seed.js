@@ -6,7 +6,9 @@ const User = require('../models/User');
 const Agency = require('../models/Agency');
 const Service = require('../models/Service');
 const Option = require('../models/ServiceOption');
-const Booking = require('../models/Booking'); // ➔ IMPORT DU MODÈLE BOOKING
+const Booking = require('../models/Booking');
+const Schedule = require('../models/Schedule'); // ➔ NOUVEAU
+const Absence = require('../models/Absence');   // ➔ NOUVEAU
 
 dotenv.config();
 
@@ -16,7 +18,9 @@ const seedDatabase = async () => {
     console.log('✅ Connecté à MongoDB pour le seeding...');
 
     // --- 1. NETTOYAGE ---
-    await Booking.deleteMany({}); // ➔ On nettoie les réservations
+    await Absence.deleteMany({});  // ➔ NOUVEAU
+    await Schedule.deleteMany({}); // ➔ NOUVEAU
+    await Booking.deleteMany({});
     await Option.deleteMany({});
     await Service.deleteMany({});
     await Agency.deleteMany({});
@@ -72,6 +76,7 @@ const seedDatabase = async () => {
     // --- 5. MANAGERS ET EMPLOYÉS ---
     let managerCount = 0;
     let employeeCount = 0;
+    const createdEmployees = []; // On garde une trace des employés pour les plannings
     
     for (const agency of createdAgencies) {
       const cityName = agency.name.split(' ')[1];
@@ -88,10 +93,12 @@ const seedDatabase = async () => {
           firstName: `Employé${i}`, lastName: cityName, email: `employe${i}.${cityName.toLowerCase()}@autoclean.fr`,
           password: commonPassword, phone: `061111111${i}`, role: employeeRole._id, agency: agency._id 
         });
-        await employee.save();
+        const savedEmployee = await employee.save();
+        createdEmployees.push(savedEmployee);
         employeeCount++;
       }
     }
+    console.log(`✅ ${managerCount} Managers et ${employeeCount} Employés créés.`);
 
     // --- 6. CLIENTS ---
     const createdCustomers = [];
@@ -123,51 +130,73 @@ const seedDatabase = async () => {
     console.log(`✅ ${createdOptions.length} Options créées !`);
 
     // --- 9. RÉSERVATIONS (BOOKINGS) ---
-    // On va créer 3 réservations pour le Client 1 dans l'agence de Paris
-
     const client1 = createdCustomers[0];
-    const agenceParis = createdAgencies[0]; // Autoclean Paris
+    const agenceParis = createdAgencies[0];
     
-    // Dates : Une dans le passé (terminée), deux dans le futur
     const datePast = new Date(); datePast.setDate(datePast.getDate() - 3);
     const dateFuture1 = new Date(); dateFuture1.setDate(dateFuture1.getDate() + 2);
     const dateFuture2 = new Date(); dateFuture2.setDate(dateFuture2.getDate() + 5);
 
     const bookingsData = [
-      { // Réservation 1 : Passée et Complétée (Lavage Extérieur sans option)
-        customer: client1._id,
-        agency: agenceParis._id,
-        service: createdServices[0]._id, // 15€, 20min
-        options: [],
-        date: datePast,
-        totalPrice: 15,
-        totalDurationMinutes: 20,
-        status: 'Completed'
+      {
+        customer: client1._id, agency: agenceParis._id, service: createdServices[0]._id, options: [],
+        date: datePast, totalPrice: 15, totalDurationMinutes: 20, status: 'Completed'
       },
-      { // Réservation 2 : Futur proche, Confirmée (Lavage Intérieur + Parfum)
-        customer: client1._id,
-        agency: agenceParis._id,
-        service: createdServices[1]._id, // 25€, 30min
-        options: [createdOptions[1]._id], // Parfum : +5€, +0min
-        date: dateFuture1,
-        totalPrice: 25 + 5, // = 30€
-        totalDurationMinutes: 30 + 0, // = 30min
-        status: 'Confirmed'
+      {
+        customer: client1._id, agency: agenceParis._id, service: createdServices[1]._id, options: [createdOptions[1]._id],
+        date: dateFuture1, totalPrice: 30, totalDurationMinutes: 30, status: 'Confirmed'
       },
-      { // Réservation 3 : Futur plus lointain, En attente (Premium + Poils + Cuirs)
-        customer: client1._id,
-        agency: agenceParis._id,
-        service: createdServices[2]._id, // 50€, 60min
-        options: [createdOptions[0]._id, createdOptions[2]._id], // Poils(+15€,+20m) et Cuirs(+25€,+15m)
-        date: dateFuture2,
-        totalPrice: 50 + 15 + 25, // = 90€
-        totalDurationMinutes: 60 + 20 + 15, // = 95min
-        status: 'Pending'
+      {
+        customer: client1._id, agency: agenceParis._id, service: createdServices[2]._id, options: [createdOptions[0]._id, createdOptions[2]._id],
+        date: dateFuture2, totalPrice: 90, totalDurationMinutes: 95, status: 'Pending'
       }
     ];
-
     await Booking.insertMany(bookingsData);
     console.log(`✅ ${bookingsData.length} Réservations créées pour le CRM !`);
+
+    // --- 10. EMPLOIS DU TEMPS (SCHEDULES) ---
+    // On assigne à chaque employé un emploi du temps du Lundi (1) au Vendredi (5) de 09h00 à 17h00.
+    const schedulesData = [];
+    for (const emp of createdEmployees) {
+      for (let day = 1; day <= 5; day++) {
+        schedulesData.push({
+          employee: emp._id,
+          agency: emp.agency,
+          dayOfWeek: day,
+          isWorking: true,
+          startTime: '09:00',
+          endTime: '17:00'
+        });
+      }
+    }
+    await Schedule.insertMany(schedulesData);
+    console.log(`✅ ${schedulesData.length} Créneaux d'emplois du temps créés !`);
+
+    // --- 11. CONGÉS (ABSENCES) ---
+    // On va mettre l'Employé 1 de Paris en vacances dans 10 jours, et l'Employé 2 de Paris malade demain.
+    const emp1Paris = createdEmployees[0];
+    const emp2Paris = createdEmployees[1];
+
+    const vacStart = new Date(); vacStart.setDate(vacStart.getDate() + 10);
+    const vacEnd = new Date(); vacEnd.setDate(vacEnd.getDate() + 15);
+    
+    const sickStart = new Date(); sickStart.setDate(sickStart.getDate() + 1);
+    const sickEnd = new Date(); sickEnd.setDate(sickEnd.getDate() + 2);
+
+    const absencesData = [
+      {
+        employee: emp1Paris._id, agency: emp1Paris.agency,
+        startDate: vacStart, endDate: vacEnd,
+        reason: 'Vacation', status: 'Approved' // Déjà validé par le Manager
+      },
+      {
+        employee: emp2Paris._id, agency: emp2Paris.agency,
+        startDate: sickStart, endDate: sickEnd,
+        reason: 'Sick', status: 'Pending' // En attente de validation
+      }
+    ];
+    await Absence.insertMany(absencesData);
+    console.log(`✅ ${absencesData.length} Demandes d'absence générées !`);
 
     console.log('🌱 Seeding terminé avec succès !');
     process.exit(0);

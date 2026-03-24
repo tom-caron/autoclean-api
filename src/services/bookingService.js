@@ -2,7 +2,10 @@ const Booking = require('../models/Booking');
 const ServiceModel = require('../models/Service');
 const Option = require('../models/ServiceOption');
 const User = require('../models/User');
+const Schedule = require('../models/Schedule');
+const Absence = require('../models/Absence');
 const AppError = require('../utils/AppError');
+const mongoose = require('mongoose');
 
 // Récupérer toutes les réservations (avec filtre optionnel)
 exports.getAllBookings = async (currentUser) => {
@@ -52,24 +55,25 @@ exports.createBooking = async (customerId, bookingData) => {
   let totalPrice = service.price;
   let totalDuration = service.durationMinutes;
 
-  // 2. Si le client a choisi des options, on les récupère et on additionne
+  // 2. Si le client a choisi des options, on les additionne
   if (optionIds && optionIds.length > 0) {
-    // $in permet de trouver toutes les options dont l'ID est dans le tableau
     const options = await Option.find({ _id: { $in: optionIds } });
-    
-    // On s'assure que le client n'a pas envoyé de faux IDs d'options
     if (options.length !== optionIds.length) {
       throw new AppError("Une ou plusieurs options sont invalides.", 400);
     }
-
-    // On ajoute les prix et les durées
     options.forEach(opt => {
       totalPrice += opt.price;
       totalDuration += opt.durationMinutes;
     });
   }
 
-  // 3. Création de la réservation avec les montants sécurisés
+  // ➔ NOUVEAU : 3. Vérification de la disponibilité avec notre algorithme !
+  const isAvailable = await checkAvailability(agencyId, date, totalDuration);
+  if (!isAvailable) {
+    throw new AppError("Désolé, aucun créneau n'est disponible à cette heure précise.", 409); // 409 Conflict
+  }
+
+  // 4. Création de la réservation avec les montants sécurisés
   const newBooking = new Booking({
     customer: customerId,
     agency: agencyId,
@@ -126,4 +130,126 @@ exports.deleteBooking = async (id) => {
   const booking = await Booking.findByIdAndDelete(id);
   if (!booking) throw new AppError("Réservation introuvable.", 404);
   return booking;
+};
+
+// L'algorithme de calcul des disponibilités
+const checkAvailability = async (agencyId, requestedDate, durationMinutes) => {
+  const reqStart = new Date(requestedDate);
+  const reqEnd = new Date(reqStart.getTime() + durationMinutes * 60000);
+  const dayOfWeek = reqStart.getDay(); // 0 = Dimanche, 1 = Lundi...
+
+  // --- FILTRE 1 : Horaires de travail ---
+  const schedules = await Schedule.find({
+    agency: agencyId,
+    dayOfWeek: dayOfWeek,
+    isWorking: true
+  });
+  
+  if (schedules.length === 0) return false; // L'agence est fermée ou aucun employé ne bosse
+
+  // --- FILTRE 2 : Absences ---
+  // On cherche les congés approuvés qui chevauchent la date demandée
+  const absences = await Absence.find({
+    agency: agencyId,
+    status: 'Approved',
+    startDate: { $lte: reqEnd },
+    endDate: { $gte: reqStart }
+  });
+
+  // On retire les employés absents de notre liste d'employés disponibles
+  const absentEmployeeIds = absences.map(a => a.employee.toString());
+  const availableEmployees = schedules.filter(s => !absentEmployeeIds.includes(s.employee.toString()));
+
+  const totalCapacity = availableEmployees.length;
+  if (totalCapacity === 0) return false; // Tous les employés prévus sont en congé !
+
+  // --- FILTRE 3 : Réservations existantes (Les conflits) ---
+  // On récupère toutes les réservations de la journée (ni annulées, ni terminées)
+  const startOfDay = new Date(reqStart); startOfDay.setHours(0,0,0,0);
+  const endOfDay = new Date(reqStart); endOfDay.setHours(23,59,59,999);
+
+  const dailyBookings = await Booking.find({
+    agency: agencyId,
+    date: { $gte: startOfDay, $lte: endOfDay },
+    status: { $in: ['Pending', 'Confirmed', 'InProgress'] } 
+  });
+
+  let overlappingBookingsCount = 0;
+
+  for (const booking of dailyBookings) {
+    const bookStart = new Date(booking.date);
+    const bookEnd = new Date(bookStart.getTime() + booking.totalDurationMinutes * 60000);
+
+    // Formule mathématique pour vérifier si deux périodes se chevauchent :
+    // (DebutA < FinB) ET (FinA > DebutB)
+    if (reqStart < bookEnd && reqEnd > bookStart) {
+      overlappingBookingsCount++;
+    }
+  }
+
+  // LE VERDICT : Y a-t-il moins de réservations simultanées que d'employés dispos ?
+  return overlappingBookingsCount < totalCapacity;
+};
+
+// Récupérer les créneaux disponibles pour une journée donnée
+exports.getAvailableSlots = async (agencyId, dateString, durationMinutes) => {
+
+  if (!agencyId || !dateString || isNaN(durationMinutes)) {
+    throw new AppError("Les paramètres agencyId, date, et duration sont requis et valides.", 400);
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(agencyId)) {
+    throw new AppError("Format d'ID d'agence invalide.", 400); // Fini les crashs Mongoose 500 !
+  }
+
+  const targetDate = new Date(dateString);
+  const dayOfWeek = targetDate.getDay(); // 0 = Dimanche, 1 = Lundi...
+
+  // 1. Récupérer les horaires d'ouverture de l'agence
+  const Agency = require('../models/Agency'); // On l'importe ici ou en haut du fichier
+  const agency = await Agency.findById(agencyId);
+  if (!agency) throw new AppError("Agence introuvable.", 404);
+
+  // On cherche les horaires pour ce jour de la semaine
+  const dayHours = agency.openingHours.find(h => h.dayOfWeek === dayOfWeek);
+  
+  // Si l'agence est fermée ce jour-là, on renvoie un tableau vide
+  if (!dayHours || !dayHours.isOpen) {
+    return []; 
+  }
+
+  // 2. Convertir les heures d'ouverture (ex: "08:00") en minutes pour faciliter le calcul
+  const [openHour, openMinute] = dayHours.openTime.split(':').map(Number);
+  const [closeHour, closeMinute] = dayHours.closeTime.split(':').map(Number);
+  
+  let currentMinutes = openHour * 60 + openMinute;
+  const endMinutes = closeHour * 60 + closeMinute;
+
+  const availableSlots = [];
+  const step = 30; // On vérifie les créneaux toutes les 30 minutes
+
+  // 3. Boucle sur toute la journée
+  while (currentMinutes + durationMinutes <= endMinutes) {
+    // Reconvertir les minutes en format HH:MM
+    const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+    const m = (currentMinutes % 60).toString().padStart(2, '0');
+    
+    // Créer un objet Date précis pour ce créneau
+    const slotTime = new Date(targetDate);
+    slotTime.setHours(h, m, 0, 0);
+
+    // On s'assure de ne pas proposer des créneaux dans le passé (si le client regarde pour aujourd'hui)
+    if (slotTime > new Date()) {
+       // ➔ LA MAGIE EST LÀ : On passe la date dans notre "Entonnoir à 3 filtres"
+       const isAvailable = await checkAvailability(agencyId, slotTime, durationMinutes);
+       if (isAvailable) {
+         availableSlots.push(`${h}:${m}`);
+       }
+    }
+
+    // On avance de 30 minutes
+    currentMinutes += step;
+  }
+
+  return availableSlots;
 };

@@ -56,3 +56,19 @@ exports.deleteBooking = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getAvailableSlots = async (req, res, next) => {
+  try {
+    const { agencyId, date, duration } = req.query;
+    
+    // Le contrôleur est aveugle : il se contente de passer les paramètres au Service
+    const slots = await bookingService.getAvailableSlots(agencyId, date, parseInt(duration));
+    
+    res.status(200).json({
+      success: true,
+      data: slots
+    });
+  } catch (error) {
+    next(error);
+  }
+};

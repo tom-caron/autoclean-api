@@ -138,6 +138,19 @@ router.get(
   bookingController.getAllBookings
 );
 
+router.get(
+  '/available-slots',
+  //verifyToken, 
+  bookingController.getAvailableSlots
+);
+
+router.get(
+  '/my-bookings', 
+  verifyToken, 
+  restrictTo('Customer', 'SuperAdmin'), 
+  bookingController.getMyBookings
+);
+
 // Récupérer les détails d'UNE réservation (Réservé au SuperAdmin et au Staff)
 router.get(
   '/:id', 
@@ -153,12 +166,7 @@ router.put(
   bookingController.updateBooking
 );
 
-router.get(
-  '/my-bookings', 
-  verifyToken, 
-  restrictTo('Customer', 'SuperAdmin'), 
-  bookingController.getMyBookings
-);
+
 
 // Supprimer une réservation (Réservé uniquement au Grand Patron)
 router.delete(

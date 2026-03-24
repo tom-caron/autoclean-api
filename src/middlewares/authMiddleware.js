@@ -20,12 +20,22 @@ exports.verifyToken = (req, res, next) => {
 };
 
 // 2. Le NOUVEAU vigile qui vérifie les rôles
-exports.restrictTo = (...allowedRoles) => {
+// APRÈS (La version corrigée)
+exports.restrictTo = (...roles) => {
   return (req, res, next) => {
-    // Si le rôle de l'utilisateur n'est pas dans le tableau des rôles autorisés
-    if (!allowedRoles.includes(req.user.role)) {
-      return next(new AppError("Vous n'avez pas la permission d'effectuer cette action.", 403)); // 403 = Forbidden
+    // 1. On récupère le nom du rôle, peu importe la structure
+    const userRoleName = typeof req.user.role === 'object' 
+      ? req.user.role.name 
+      : req.user.role;
+
+    console.log("Rôle détecté :", userRoleName); // Petit log pour être sûr
+    console.log("Rôles autorisés :", roles);
+
+    // 2. On compare le NOM du rôle
+    if (!roles.includes(userRoleName)) {
+      return next(new AppError("Vous n'avez pas la permission d'effectuer cette action.", 403));
     }
+    
     next();
   };
 };
