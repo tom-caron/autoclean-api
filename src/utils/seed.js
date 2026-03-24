@@ -4,7 +4,8 @@ const bcrypt = require('bcrypt');
 const Role = require('../models/Role');
 const User = require('../models/User');
 const Agency = require('../models/Agency');
-const Service = require('../models/Service'); // ➔ IMPORT DU MODÈLE PRESTATION
+const Service = require('../models/Service');
+const Option = require('../models/ServiceOption')
 
 dotenv.config();
 
@@ -113,6 +114,17 @@ const seedDatabase = async () => {
       await Service.create(prestation);
     }
     console.log(`✅ ${prestationsData.length} Prestations créées !`);
+
+    // --- 8. OPTIONS ---
+    await Option.deleteMany({}); // On nettoie d'abord
+    const optionsData = [
+      { name: 'Poils d\'animaux', description: 'Aspiration approfondie.', price: 15, durationMinutes: 20 },
+      { name: 'Parfum Habitacle', description: 'Senteur au choix.', price: 5, durationMinutes: 0 },
+      { name: 'Soin des cuirs', description: 'Baume nourrissant pour sièges.', price: 25, durationMinutes: 15 }
+    ];
+    // Petite astuce de pro : insertMany permet d'insérer un tableau entier d'un seul coup en base !
+    await Option.insertMany(optionsData);
+    console.log(`✅ ${optionsData.length} Options créées !`);
 
     console.log('🌱 Seeding terminé avec succès !');
     process.exit(0);
