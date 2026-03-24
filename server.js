@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./src/config/db');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/config/swagger');
 const authRoutes = require('./src/routes/authRoutes');
 const agencyRoutes = require('./src/routes/agencyRoutes');
 const prestationRoutes = require('./src/routes/prestationRoutes');
@@ -23,6 +25,7 @@ const app = express();
 app.use(cors()); // Autorise les requêtes de tes futurs fronts Vue.js
 app.use(express.json()); // Permet à ton API de lire les données JSON (formulaires, etc.)
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth', authRoutes);
 app.use('/api/agencies', agencyRoutes);
 app.use('/api/prestations', prestationRoutes);
