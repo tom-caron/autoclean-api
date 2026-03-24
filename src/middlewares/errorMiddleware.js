@@ -1,6 +1,7 @@
 // src/middlewares/errorMiddleware.js
 
 const errorHandler = (err, req, res, next) => {
+  //console.error(err)
   // 1. On récupère le statusCode de notre AppError, ou on met 500 par défaut
   let statusCode = err.statusCode || 500;
   

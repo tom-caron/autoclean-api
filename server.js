@@ -7,6 +7,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const agencyRoutes = require('./src/routes/agencyRoutes');
 const prestationRoutes = require('./src/routes/prestationRoutes');
 const optionRoutes = require('./src/routes/optionRoutes');
+const bookingRoutes = require('./src/routes/bookingRoutes');
 const { errorHandler } = require('./src/middlewares/errorMiddleware');
 
 // Chargement des variables d'environnement
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/agencies', agencyRoutes);
 app.use('/api/prestations', prestationRoutes);
 app.use('/api/options', optionRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 app.use(errorHandler);
 

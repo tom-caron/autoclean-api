@@ -1,26 +1,27 @@
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
-  agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency', required: true },
+  // Les relations (Qui, Où, Quoi)
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle', required: true },
-  
-  // L'employé assigné au lavage (peut être nul au moment de la réservation client)
-  assignedEmployee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  
+  agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency', required: true },
   service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
-  options: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ServiceOption' }], // Liste des options choisies
   
-  date: { type: Date, required: true }, // Date et heure de DÉBUT
-  totalDuration: { type: Number, required: true }, // Durée totale calculée (Service + Options) en minutes
-  totalPrice: { type: Number, required: true }, // Prix total calculé
+  // Un tableau d'options (car le client peut en choisir plusieurs)
+  options: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Option' }],
   
+  // Les données du rendez-vous
+  date: { type: Date, required: true },
+  
+  // Les totaux (calculés par le backend)
+  totalPrice: { type: Number, required: true },
+  totalDurationMinutes: { type: Number, required: true },
+  
+  // Le cycle de vie de la réservation
   status: { 
     type: String, 
-    enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'], 
-    default: 'pending' 
-  },
-  notes: { type: String }
+    enum: ['Pending', 'Confirmed', 'InProgress', 'Completed', 'Cancelled'], 
+    default: 'Pending' 
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Booking', bookingSchema);

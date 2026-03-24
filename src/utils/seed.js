@@ -5,7 +5,8 @@ const Role = require('../models/Role');
 const User = require('../models/User');
 const Agency = require('../models/Agency');
 const Service = require('../models/Service');
-const Option = require('../models/ServiceOption')
+const Option = require('../models/ServiceOption');
+const Booking = require('../models/Booking'); // ➔ IMPORT DU MODÈLE BOOKING
 
 dotenv.config();
 
@@ -15,10 +16,12 @@ const seedDatabase = async () => {
     console.log('✅ Connecté à MongoDB pour le seeding...');
 
     // --- 1. NETTOYAGE ---
-    await Service.deleteMany({}); // ➔ On nettoie aussi le catalogue
+    await Booking.deleteMany({}); // ➔ On nettoie les réservations
+    await Option.deleteMany({});
+    await Service.deleteMany({});
     await Agency.deleteMany({});
     await User.deleteMany({});
-    console.log('🧹 Base de données nettoyée (Prestations, Agences, Users).');
+    console.log('🧹 Base de données nettoyée.');
 
     // --- 2. RÔLES ---
     const rolesData = [
@@ -89,42 +92,82 @@ const seedDatabase = async () => {
         employeeCount++;
       }
     }
-    console.log(`✅ ${managerCount} Managers et ${employeeCount} Employés créés.`);
 
     // --- 6. CLIENTS ---
+    const createdCustomers = [];
     for (let i = 1; i <= 5; i++) {
       const customer = new User({
         firstName: `Client${i}`, lastName: 'Test', email: `client${i}@test.fr`,
         password: commonPassword, phone: `070000000${i}`, role: customerRole._id
       });
-      await customer.save();
+      createdCustomers.push(await customer.save());
     }
     console.log('✅ 5 Clients créés.');
 
-    // --- 7. PRESTATIONS (NOUVEAU) ---
+    // --- 7. PRESTATIONS ---
     const prestationsData = [
-      { name: 'Lavage Extérieur Classique', description: 'Nettoyage carrosserie, jantes et séchage.', price: 15, durationMinutes: 20 },
-      { name: 'Lavage Intérieur', description: 'Aspiration complète, nettoyage des plastiques et vitres.', price: 25, durationMinutes: 30 },
-      { name: 'Lavage Premium Intégral', description: 'Formule complète intérieur + extérieur avec finition cire.', price: 50, durationMinutes: 60 },
-      { name: 'Rénovation Optiques', description: 'Polissage des phares ternis pour retrouver la transparence.', price: 40, durationMinutes: 45 },
-      { name: 'Désinfection Habitacle', description: 'Traitement antibactérien et anti-odeur à l\'ozone.', price: 30, durationMinutes: 20 }
+      { name: 'Lavage Extérieur Classique', description: 'Nettoyage carrosserie.', price: 15, durationMinutes: 20 },
+      { name: 'Lavage Intérieur', description: 'Aspiration complète.', price: 25, durationMinutes: 30 },
+      { name: 'Lavage Premium Intégral', description: 'Intérieur + extérieur.', price: 50, durationMinutes: 60 }
     ];
-
-    for (const prestation of prestationsData) {
-      await Service.create(prestation);
-    }
-    console.log(`✅ ${prestationsData.length} Prestations créées !`);
+    const createdServices = await Service.insertMany(prestationsData);
+    console.log(`✅ ${createdServices.length} Prestations créées !`);
 
     // --- 8. OPTIONS ---
-    await Option.deleteMany({}); // On nettoie d'abord
     const optionsData = [
       { name: 'Poils d\'animaux', description: 'Aspiration approfondie.', price: 15, durationMinutes: 20 },
       { name: 'Parfum Habitacle', description: 'Senteur au choix.', price: 5, durationMinutes: 0 },
-      { name: 'Soin des cuirs', description: 'Baume nourrissant pour sièges.', price: 25, durationMinutes: 15 }
+      { name: 'Soin des cuirs', description: 'Baume nourrissant.', price: 25, durationMinutes: 15 }
     ];
-    // Petite astuce de pro : insertMany permet d'insérer un tableau entier d'un seul coup en base !
-    await Option.insertMany(optionsData);
-    console.log(`✅ ${optionsData.length} Options créées !`);
+    const createdOptions = await Option.insertMany(optionsData);
+    console.log(`✅ ${createdOptions.length} Options créées !`);
+
+    // --- 9. RÉSERVATIONS (BOOKINGS) ---
+    // On va créer 3 réservations pour le Client 1 dans l'agence de Paris
+
+    const client1 = createdCustomers[0];
+    const agenceParis = createdAgencies[0]; // Autoclean Paris
+    
+    // Dates : Une dans le passé (terminée), deux dans le futur
+    const datePast = new Date(); datePast.setDate(datePast.getDate() - 3);
+    const dateFuture1 = new Date(); dateFuture1.setDate(dateFuture1.getDate() + 2);
+    const dateFuture2 = new Date(); dateFuture2.setDate(dateFuture2.getDate() + 5);
+
+    const bookingsData = [
+      { // Réservation 1 : Passée et Complétée (Lavage Extérieur sans option)
+        customer: client1._id,
+        agency: agenceParis._id,
+        service: createdServices[0]._id, // 15€, 20min
+        options: [],
+        date: datePast,
+        totalPrice: 15,
+        totalDurationMinutes: 20,
+        status: 'Completed'
+      },
+      { // Réservation 2 : Futur proche, Confirmée (Lavage Intérieur + Parfum)
+        customer: client1._id,
+        agency: agenceParis._id,
+        service: createdServices[1]._id, // 25€, 30min
+        options: [createdOptions[1]._id], // Parfum : +5€, +0min
+        date: dateFuture1,
+        totalPrice: 25 + 5, // = 30€
+        totalDurationMinutes: 30 + 0, // = 30min
+        status: 'Confirmed'
+      },
+      { // Réservation 3 : Futur plus lointain, En attente (Premium + Poils + Cuirs)
+        customer: client1._id,
+        agency: agenceParis._id,
+        service: createdServices[2]._id, // 50€, 60min
+        options: [createdOptions[0]._id, createdOptions[2]._id], // Poils(+15€,+20m) et Cuirs(+25€,+15m)
+        date: dateFuture2,
+        totalPrice: 50 + 15 + 25, // = 90€
+        totalDurationMinutes: 60 + 20 + 15, // = 95min
+        status: 'Pending'
+      }
+    ];
+
+    await Booking.insertMany(bookingsData);
+    console.log(`✅ ${bookingsData.length} Réservations créées pour le CRM !`);
 
     console.log('🌱 Seeding terminé avec succès !');
     process.exit(0);

@@ -7,4 +7,4 @@ const optionSchema = new mongoose.Schema({
   durationMinutes: { type: Number, default: 0 } // Temps à rajouter au créneau
 }, { timestamps: true });
 
-module.exports = mongoose.model('ServiceOption', optionSchema);
+module.exports = mongoose.model('Option', optionSchema);
