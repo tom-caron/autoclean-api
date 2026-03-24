@@ -26,7 +26,8 @@ const loginSchema = Joi.object({
     'string.empty': "L'email est obligatoire."
   }),
   password: Joi.string().required().messages({
-    'string.empty': "Le mot de passe est obligatoire."
+    'string.empty': "Le mot de passe ne doit pas être vide.",
+    'any.required': "Le mot de passe est obligatoire."
   })
 });
 

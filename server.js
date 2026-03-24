@@ -29,6 +29,10 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 // Lancement du serveur
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+  });
+}
+
+module.exports = app;
