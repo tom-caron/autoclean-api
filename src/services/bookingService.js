@@ -102,13 +102,35 @@ exports.updateBooking = async (id, updateData, currentUser) => {
   const booking = await Booking.findById(id);
   if (!booking) throw new AppError("Réservation introuvable.", 404);
 
-  // 2. ➔ RÈGLE MÉTIER : Vérification des droits de modification
+  // 2. RÈGLE MÉTIER : Vérification des droits et de la règle des 48h
   if (currentUser) {
-    if (currentUser.role === 'Customer') {
+    // Si c'est un client qui fait la requête
+    if (currentUser.role === 'Customer' || currentUser.role.name === 'Customer') {
+      
+      // A. Vérification de propriété
       if (booking.customer._id.toString() !== currentUser.userId) {
         throw new AppError("Vous ne pouvez modifier que vos propres réservations.", 403);
       }
-    } else if (['Manager', 'Employee'].includes(currentUser.role)) {
+
+      // B. La fameuse règle des 48h (Anti-abus)
+      const now = new Date();
+      const bookingDate = new Date(booking.date);
+      const timeDifferenceInHours = (bookingDate - now) / (1000 * 60 * 60);
+
+      if (timeDifferenceInHours < 48) {
+        throw new AppError("Les modifications ou annulations ne sont possibles que 48h à l'avance. Veuillez contacter l'agence.", 403);
+      }
+
+      // C. Sécurité : On empêche le client de modifier son prix ou de s'auto-valider !
+      // Le client ne peut envoyer qu'une demande d'annulation ('Cancelled') ou un changement de date.
+      const allowedUpdates = {};
+      if (updateData.status === 'Cancelled') allowedUpdates.status = 'Cancelled';
+      if (updateData.date) allowedUpdates.date = updateData.date;
+      
+      updateData = allowedUpdates; // On écrase les données avec uniquement ce qui est permis
+    } 
+    // Si c'est le Staff
+    else if (['Manager', 'Employee'].includes(currentUser.role?.name || currentUser.role)) {
       const staffMember = await User.findById(currentUser.userId);
       if (booking.agency._id.toString() !== staffMember.agency.toString()) {
         throw new AppError("Vous ne pouvez modifier que les réservations de votre agence.", 403);
