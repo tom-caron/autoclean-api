@@ -12,7 +12,7 @@ exports.getAllBookings = async (currentUser) => {
   let filter = {};
   
   // ➔ RÈGLE MÉTIER : Cloisonnement pour le Manager
-  if (currentUser && currentUser.role === 'Manager') {
+  if (currentUser && (currentUser.role === 'Manager' || currentUser.role === 'Employee')) {
     const manager = await User.findById(currentUser.userId);
     filter.agency = manager.agency;
   }

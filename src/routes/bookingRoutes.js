@@ -134,7 +134,7 @@ router.post(
 router.get(
   '/', 
   verifyToken, 
-  restrictTo('SuperAdmin', 'Manager'), 
+  restrictTo('SuperAdmin', 'Manager', 'Employee'), 
   bookingController.getAllBookings
 );
 
