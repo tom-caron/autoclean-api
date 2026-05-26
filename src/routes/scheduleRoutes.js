@@ -7,18 +7,18 @@ const { verifyToken, restrictTo } = require('../middlewares/authMiddleware');
 
 // Créer ou modifier l'horaire d'un employé (SuperAdmin / Manager)
 router.post(
-  '/', 
-  verifyToken, 
-  restrictTo('SuperAdmin', 'Manager'), 
-  validate(createScheduleSchema), 
+  '/',
+  verifyToken,
+  restrictTo('SuperAdmin', 'Manager'),
+  validate(createScheduleSchema),
   scheduleController.setSchedule
 );
 
 // Récupérer tous les horaires d'une agence
 router.get(
-  '/agency/:agencyId', 
-  verifyToken, 
-  restrictTo('SuperAdmin', 'Manager', 'Employee'), 
+  '/agency/:agencyId',
+  verifyToken,
+  restrictTo('SuperAdmin', 'Manager', 'Employee'),
   scheduleController.getSchedules
 );
 

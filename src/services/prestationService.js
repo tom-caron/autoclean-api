@@ -7,7 +7,7 @@ exports.getAllPrestations = async () => {
 
 exports.getPrestationById = async (id) => {
   const prestation = await ServiceModel.findById(id);
-  if (!prestation) throw new AppError("Prestation introuvable.", 404);
+  if (!prestation) throw new AppError('Prestation introuvable.', 404);
   return prestation;
 };
 
@@ -18,13 +18,16 @@ exports.createPrestation = async (data) => {
 };
 
 exports.updatePrestation = async (id, data) => {
-  const prestation = await ServiceModel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-  if (!prestation) throw new AppError("Prestation introuvable.", 404);
+  const prestation = await ServiceModel.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true,
+  });
+  if (!prestation) throw new AppError('Prestation introuvable.', 404);
   return prestation;
 };
 
 exports.deletePrestation = async (id) => {
   const prestation = await ServiceModel.findByIdAndDelete(id);
-  if (!prestation) throw new AppError("Prestation introuvable.", 404);
+  if (!prestation) throw new AppError('Prestation introuvable.', 404);
   return prestation;
 };

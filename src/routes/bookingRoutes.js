@@ -123,57 +123,50 @@ const { verifyToken, restrictTo } = require('../middlewares/authMiddleware');
  *         description: Supprimée
  */
 router.post(
-  '/', 
-  verifyToken, 
-  restrictTo('Customer', 'SuperAdmin'), 
-  validate(createBookingSchema), 
+  '/',
+  verifyToken,
+  restrictTo('Customer', 'SuperAdmin'),
+  validate(createBookingSchema),
   bookingController.createBooking
 );
 
 // Récupérer TOUTES les réservations (Réservé au staff)
 router.get(
-  '/', 
-  verifyToken, 
-  restrictTo('SuperAdmin', 'Manager', 'Employee'), 
+  '/',
+  verifyToken,
+  restrictTo('SuperAdmin', 'Manager', 'Employee'),
   bookingController.getAllBookings
 );
 
 router.get(
   '/available-slots',
-  //verifyToken, 
+  //verifyToken,
   bookingController.getAvailableSlots
 );
 
 router.get(
-  '/my-bookings', 
-  verifyToken, 
-  restrictTo('Customer', 'SuperAdmin'), 
+  '/my-bookings',
+  verifyToken,
+  restrictTo('Customer', 'SuperAdmin'),
   bookingController.getMyBookings
 );
 
 // Récupérer les détails d'UNE réservation (Réservé au SuperAdmin et au Staff)
 router.get(
-  '/:id', 
-  verifyToken, 
-  restrictTo('SuperAdmin', 'Manager', 'Employee'), 
+  '/:id',
+  verifyToken,
+  restrictTo('SuperAdmin', 'Manager', 'Employee'),
   bookingController.getBooking
 );
 
 router.put(
-  '/:id', 
-  verifyToken, 
-  restrictTo('SuperAdmin', 'Manager', 'Employee', 'Customer'), 
+  '/:id',
+  verifyToken,
+  restrictTo('SuperAdmin', 'Manager', 'Employee', 'Customer'),
   bookingController.updateBooking
 );
 
-
-
 // Supprimer une réservation (Réservé uniquement au Grand Patron)
-router.delete(
-  '/:id', 
-  verifyToken, 
-  restrictTo('SuperAdmin'), 
-  bookingController.deleteBooking
-);
+router.delete('/:id', verifyToken, restrictTo('SuperAdmin'), bookingController.deleteBooking);
 
 module.exports = router;

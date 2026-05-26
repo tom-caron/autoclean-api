@@ -7,7 +7,7 @@ exports.getAllOptions = async () => {
 
 exports.getOptionById = async (id) => {
   const option = await Option.findById(id);
-  if (!option) throw new AppError("Option introuvable.", 404);
+  if (!option) throw new AppError('Option introuvable.', 404);
   return option;
 };
 
@@ -19,12 +19,12 @@ exports.createOption = async (data) => {
 
 exports.updateOption = async (id, data) => {
   const option = await Option.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-  if (!option) throw new AppError("Option introuvable.", 404);
+  if (!option) throw new AppError('Option introuvable.', 404);
   return option;
 };
 
 exports.deleteOption = async (id) => {
   const option = await Option.findByIdAndDelete(id);
-  if (!option) throw new AppError("Option introuvable.", 404);
+  if (!option) throw new AppError('Option introuvable.', 404);
   return option;
 };

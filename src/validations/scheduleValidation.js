@@ -9,11 +9,11 @@ const createScheduleSchema = Joi.object({
   isWorking: Joi.boolean().required(),
   // Si l'employé travaille, startTime et endTime sont obligatoires
   startTime: Joi.string().pattern(timeRegex).when('isWorking', { is: true, then: Joi.required() }),
-  endTime: Joi.string().pattern(timeRegex).when('isWorking', { is: true, then: Joi.required() })
+  endTime: Joi.string().pattern(timeRegex).when('isWorking', { is: true, then: Joi.required() }),
 });
 
 const updateScheduleSchema = createScheduleSchema.fork(
-  ['employeeId', 'dayOfWeek', 'isWorking', 'startTime', 'endTime'], 
+  ['employeeId', 'dayOfWeek', 'isWorking', 'startTime', 'endTime'],
   (schema) => schema.optional()
 );
 

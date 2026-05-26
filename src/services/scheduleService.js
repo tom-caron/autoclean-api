@@ -6,25 +6,25 @@ exports.createOrUpdateSchedule = async (data, currentUser) => {
   // 1. On vérifie que l'employé existe
   const employee = await User.findById(data.employeeId);
   if (!employee || employee.role !== 'Employee') {
-    throw new AppError("Employé introuvable ou rôle invalide.", 404);
+    throw new AppError('Employé introuvable ou rôle invalide.', 404);
   }
 
   // 2. SÉCURITÉ : Le Manager ne gère que son agence
   if (currentUser.role === 'Manager') {
     const manager = await User.findById(currentUser.userId);
     if (manager.agency.toString() !== employee.agency.toString()) {
-      throw new AppError("Vous ne pouvez gérer que les employés de votre agence.", 403);
+      throw new AppError('Vous ne pouvez gérer que les employés de votre agence.', 403);
     }
   }
 
   // 3. Upsert : Met à jour si le jour existe déjà, sinon le crée
   const schedule = await Schedule.findOneAndUpdate(
     { employee: employee._id, dayOfWeek: data.dayOfWeek },
-    { 
-      agency: employee.agency, 
-      isWorking: data.isWorking, 
-      startTime: data.startTime, 
-      endTime: data.endTime 
+    {
+      agency: employee.agency,
+      isWorking: data.isWorking,
+      startTime: data.startTime,
+      endTime: data.endTime,
     },
     { new: true, upsert: true, runValidators: true }
   );
@@ -37,7 +37,7 @@ exports.getAgencySchedules = async (agencyId, currentUser) => {
   if (currentUser.role === 'Manager') {
     const manager = await User.findById(currentUser.userId);
     if (manager.agency.toString() !== agencyId.toString()) {
-      throw new AppError("Accès refusé pour cette agence.", 403);
+      throw new AppError('Accès refusé pour cette agence.', 403);
     }
   }
 

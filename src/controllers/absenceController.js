@@ -11,7 +11,11 @@ exports.requestAbsence = async (req, res, next) => {
 
 exports.changeStatus = async (req, res, next) => {
   try {
-    const absence = await absenceService.updateAbsenceStatus(req.params.id, req.body.status, req.user);
+    const absence = await absenceService.updateAbsenceStatus(
+      req.params.id,
+      req.body.status,
+      req.user
+    );
     res.status(200).json({ success: true, data: absence });
   } catch (error) {
     next(error);

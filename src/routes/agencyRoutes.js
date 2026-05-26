@@ -46,7 +46,6 @@ const { createAgencySchema, updateAgencySchema } = require('../validations/agenc
  */
 router.get('/', agencyController.getAllAgencies);
 
-
 /**
  * @swagger
  * /api/agencies/{id}:
@@ -104,26 +103,21 @@ router.get('/', agencyController.getAllAgencies);
 router.get('/:id', agencyController.getAgency);
 
 router.post(
-  '/', 
-  verifyToken, 
-  restrictTo('SuperAdmin'), 
+  '/',
+  verifyToken,
+  restrictTo('SuperAdmin'),
   validate(createAgencySchema),
   agencyController.createAgency
 );
 
 router.put(
-  '/:id', 
-  verifyToken, 
-  restrictTo('SuperAdmin', 'Manager'), 
+  '/:id',
+  verifyToken,
+  restrictTo('SuperAdmin', 'Manager'),
   validate(updateAgencySchema),
   agencyController.updateAgency
 );
 
-router.delete(
-  '/:id', 
-  verifyToken, 
-  restrictTo('SuperAdmin'), 
-  agencyController.deleteAgency
-);
+router.delete('/:id', verifyToken, restrictTo('SuperAdmin'), agencyController.deleteAgency);
 
 module.exports = router;

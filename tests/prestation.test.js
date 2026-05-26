@@ -15,17 +15,28 @@ describe('Tests du Catalogue de Prestations', () => {
 
     // 2. Création de l'Admin et de son token
     const adminUser = await User.create({
-      firstName: 'Boss', lastName: 'Auto', email: 'boss@test.com',
-      password: 'hash', phone: '0600000000', role: adminRole._id
+      firstName: 'Boss',
+      lastName: 'Auto',
+      email: 'boss@test.com',
+      password: 'hash',
+      phone: '0600000000',
+      role: adminRole._id,
     });
     adminToken = jwt.sign({ userId: adminUser._id, role: 'SuperAdmin' }, process.env.JWT_SECRET);
 
     // 3. Création d'un Client et de son token
     const customerUser = await User.create({
-      firstName: 'Client', lastName: 'Zero', email: 'client@test.com',
-      password: 'hash', phone: '0611111111', role: customerRole._id
+      firstName: 'Client',
+      lastName: 'Zero',
+      email: 'client@test.com',
+      password: 'hash',
+      phone: '0611111111',
+      role: customerRole._id,
     });
-    customerToken = jwt.sign({ userId: customerUser._id, role: 'Customer' }, process.env.JWT_SECRET);
+    customerToken = jwt.sign(
+      { userId: customerUser._id, role: 'Customer' },
+      process.env.JWT_SECRET
+    );
   });
 
   describe('GET /api/prestations', () => {
@@ -44,7 +55,7 @@ describe('Tests du Catalogue de Prestations', () => {
         .send({
           name: 'Lavage Premium',
           price: 49.99,
-          durationMinutes: 60
+          durationMinutes: 60,
         });
 
       expect(res.statusCode).toBe(201);
@@ -59,7 +70,7 @@ describe('Tests du Catalogue de Prestations', () => {
         .send({ name: 'Lavage', price: 10, durationMinutes: 15 });
 
       // 403 Forbidden : Accès refusé par le restrictTo
-      expect(res.statusCode).toBe(403); 
+      expect(res.statusCode).toBe(403);
     });
 
     it('devrait bloquer la création si le prix est négatif (Test Joi)', async () => {

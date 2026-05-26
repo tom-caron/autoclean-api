@@ -6,7 +6,8 @@ const options = {
     info: {
       title: 'API Autoclean Pro',
       version: '1.0.0',
-      description: 'Documentation interactive de l\'API pour le CRM de lavage automobile. Développée pour le projet de fin d\'études.',
+      description:
+        "Documentation interactive de l'API pour le CRM de lavage automobile. Développée pour le projet de fin d'études.",
     },
     servers: [
       {
@@ -31,7 +32,7 @@ const options = {
     ],
   },
   // ➔ Swagger va chercher les commentaires dans tous les fichiers du dossier routes
-  apis: ['./src/routes/*.js'], 
+  apis: ['./src/routes/*.js'],
 };
 
 const swaggerSpec = swaggerJSDoc(options);

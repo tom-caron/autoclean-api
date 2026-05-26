@@ -15,23 +15,34 @@ describe('Tests des Options Supplémentaires', () => {
 
     // 2. Création de l'Admin et de son token
     const adminUser = await User.create({
-      firstName: 'Boss', lastName: 'Auto', email: 'boss@test.com',
-      password: 'hash', phone: '0600000000', role: adminRole._id
+      firstName: 'Boss',
+      lastName: 'Auto',
+      email: 'boss@test.com',
+      password: 'hash',
+      phone: '0600000000',
+      role: adminRole._id,
     });
     adminToken = jwt.sign({ userId: adminUser._id, role: 'SuperAdmin' }, process.env.JWT_SECRET);
 
     // 3. Création d'un Client et de son token
     const customerUser = await User.create({
-      firstName: 'Client', lastName: 'Zero', email: 'client@test.com',
-      password: 'hash', phone: '0611111111', role: customerRole._id
+      firstName: 'Client',
+      lastName: 'Zero',
+      email: 'client@test.com',
+      password: 'hash',
+      phone: '0611111111',
+      role: customerRole._id,
     });
-    customerToken = jwt.sign({ userId: customerUser._id, role: 'Customer' }, process.env.JWT_SECRET);
+    customerToken = jwt.sign(
+      { userId: customerUser._id, role: 'Customer' },
+      process.env.JWT_SECRET
+    );
   });
 
   describe('GET /api/options', () => {
     it('devrait retourner une liste vide au début (accès public)', async () => {
       const res = await request(app).get('/api/options');
-      
+
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.count).toBe(0);
@@ -46,7 +57,7 @@ describe('Tests des Options Supplémentaires', () => {
         .send({
           name: 'Parfum Sapin',
           price: 5,
-          durationMinutes: 0 // On teste bien que 0 est accepté !
+          durationMinutes: 0, // On teste bien que 0 est accepté !
         });
 
       expect(res.statusCode).toBe(201);
@@ -61,7 +72,7 @@ describe('Tests des Options Supplémentaires', () => {
         .send({ name: 'Cire', price: 10, durationMinutes: 10 });
 
       // 403 Forbidden : Accès refusé par le restrictTo
-      expect(res.statusCode).toBe(403); 
+      expect(res.statusCode).toBe(403);
     });
 
     it('devrait bloquer la création si la durée est négative (Test Joi)', async () => {

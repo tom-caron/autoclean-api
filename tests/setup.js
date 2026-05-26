@@ -8,12 +8,12 @@ let mongoServer;
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   const mongoUri = mongoServer.getUri();
-  
+
   // Si on est déjà connecté (ex: par le server.js normal), on se déconnecte d'abord
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
   }
-  
+
   await mongoose.connect(mongoUri);
 });
 

@@ -10,7 +10,7 @@ const mongoose = require('mongoose');
 // Récupérer toutes les réservations (avec filtre optionnel)
 exports.getAllBookings = async (currentUser) => {
   let filter = {};
-  
+
   // ➔ RÈGLE MÉTIER : Cloisonnement pour le Manager
   if (currentUser && (currentUser.role === 'Manager' || currentUser.role === 'Employee')) {
     const manager = await User.findById(currentUser.userId);
@@ -31,9 +31,9 @@ exports.getBookingById = async (id, currentUser) => {
     .populate('agency', 'name address')
     .populate('service', 'name price durationMinutes')
     .populate('options', 'name price durationMinutes');
-    
-  if (!booking) throw new AppError("Réservation introuvable.", 404);
-  
+
+  if (!booking) throw new AppError('Réservation introuvable.', 404);
+
   // ➔ RÈGLE MÉTIER : Vérification d'accès
   if (currentUser && ['Manager', 'Employee'].includes(currentUser.role)) {
     const staffMember = await User.findById(currentUser.userId);
@@ -41,7 +41,7 @@ exports.getBookingById = async (id, currentUser) => {
       throw new AppError("Accès refusé. Cette réservation n'appartient pas à votre agence.", 403);
     }
   }
-  
+
   return booking;
 };
 
@@ -50,7 +50,7 @@ exports.createBooking = async (customerId, bookingData) => {
 
   // 1. Récupérer la prestation pour avoir son vrai prix et sa durée
   const service = await ServiceModel.findById(serviceId);
-  if (!service) throw new AppError("Prestation introuvable.", 404);
+  if (!service) throw new AppError('Prestation introuvable.', 404);
 
   let totalPrice = service.price;
   let totalDuration = service.durationMinutes;
@@ -59,9 +59,9 @@ exports.createBooking = async (customerId, bookingData) => {
   if (optionIds && optionIds.length > 0) {
     const options = await Option.find({ _id: { $in: optionIds } });
     if (options.length !== optionIds.length) {
-      throw new AppError("Une ou plusieurs options sont invalides.", 400);
+      throw new AppError('Une ou plusieurs options sont invalides.', 400);
     }
-    options.forEach(opt => {
+    options.forEach((opt) => {
       totalPrice += opt.price;
       totalDuration += opt.durationMinutes;
     });
@@ -81,7 +81,7 @@ exports.createBooking = async (customerId, bookingData) => {
     options: optionIds || [],
     date,
     totalPrice,
-    totalDurationMinutes: totalDuration
+    totalDurationMinutes: totalDuration,
   });
 
   await newBooking.save();
@@ -100,16 +100,15 @@ exports.getCustomerBookings = async (customerId) => {
 exports.updateBooking = async (id, updateData, currentUser) => {
   // 1. On vérifie d'abord que la réservation existe
   const booking = await Booking.findById(id);
-  if (!booking) throw new AppError("Réservation introuvable.", 404);
+  if (!booking) throw new AppError('Réservation introuvable.', 404);
 
   // 2. RÈGLE MÉTIER : Vérification des droits et de la règle des 48h
   if (currentUser) {
     // Si c'est un client qui fait la requête
     if (currentUser.role === 'Customer' || currentUser.role.name === 'Customer') {
-      
       // A. Vérification de propriété
       if (booking.customer._id.toString() !== currentUser.userId) {
-        throw new AppError("Vous ne pouvez modifier que vos propres réservations.", 403);
+        throw new AppError('Vous ne pouvez modifier que vos propres réservations.', 403);
       }
 
       // B. La fameuse règle des 48h (Anti-abus)
@@ -118,7 +117,10 @@ exports.updateBooking = async (id, updateData, currentUser) => {
       const timeDifferenceInHours = (bookingDate - now) / (1000 * 60 * 60);
 
       if (timeDifferenceInHours < 48) {
-        throw new AppError("Les modifications ou annulations ne sont possibles que 48h à l'avance. Veuillez contacter l'agence.", 403);
+        throw new AppError(
+          "Les modifications ou annulations ne sont possibles que 48h à l'avance. Veuillez contacter l'agence.",
+          403
+        );
       }
 
       // C. Sécurité : On empêche le client de modifier son prix ou de s'auto-valider !
@@ -126,31 +128,31 @@ exports.updateBooking = async (id, updateData, currentUser) => {
       const allowedUpdates = {};
       if (updateData.status === 'Cancelled') allowedUpdates.status = 'Cancelled';
       if (updateData.date) allowedUpdates.date = updateData.date;
-      
+
       updateData = allowedUpdates; // On écrase les données avec uniquement ce qui est permis
-    } 
+    }
     // Si c'est le Staff
     else if (['Manager', 'Employee'].includes(currentUser.role?.name || currentUser.role)) {
       const staffMember = await User.findById(currentUser.userId);
       if (booking.agency._id.toString() !== staffMember.agency.toString()) {
-        throw new AppError("Vous ne pouvez modifier que les réservations de votre agence.", 403);
+        throw new AppError('Vous ne pouvez modifier que les réservations de votre agence.', 403);
       }
     }
   }
 
   // 3. Application de la mise à jour
-  const updatedBooking = await Booking.findByIdAndUpdate(id, updateData, { 
-    new: true, 
-    runValidators: true 
+  const updatedBooking = await Booking.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
   });
-  
+
   return updatedBooking;
 };
 
 // Supprimer une réservation (Hard delete)
 exports.deleteBooking = async (id) => {
   const booking = await Booking.findByIdAndDelete(id);
-  if (!booking) throw new AppError("Réservation introuvable.", 404);
+  if (!booking) throw new AppError('Réservation introuvable.', 404);
   return booking;
 };
 
@@ -164,9 +166,9 @@ const checkAvailability = async (agencyId, requestedDate, durationMinutes) => {
   const schedules = await Schedule.find({
     agency: agencyId,
     dayOfWeek: dayOfWeek,
-    isWorking: true
+    isWorking: true,
   });
-  
+
   if (schedules.length === 0) return false; // L'agence est fermée ou aucun employé ne bosse
 
   // --- FILTRE 2 : Absences ---
@@ -175,25 +177,29 @@ const checkAvailability = async (agencyId, requestedDate, durationMinutes) => {
     agency: agencyId,
     status: 'Approved',
     startDate: { $lte: reqEnd },
-    endDate: { $gte: reqStart }
+    endDate: { $gte: reqStart },
   });
 
   // On retire les employés absents de notre liste d'employés disponibles
-  const absentEmployeeIds = absences.map(a => a.employee.toString());
-  const availableEmployees = schedules.filter(s => !absentEmployeeIds.includes(s.employee.toString()));
+  const absentEmployeeIds = absences.map((a) => a.employee.toString());
+  const availableEmployees = schedules.filter(
+    (s) => !absentEmployeeIds.includes(s.employee.toString())
+  );
 
   const totalCapacity = availableEmployees.length;
   if (totalCapacity === 0) return false; // Tous les employés prévus sont en congé !
 
   // --- FILTRE 3 : Réservations existantes (Les conflits) ---
   // On récupère toutes les réservations de la journée (ni annulées, ni terminées)
-  const startOfDay = new Date(reqStart); startOfDay.setHours(0,0,0,0);
-  const endOfDay = new Date(reqStart); endOfDay.setHours(23,59,59,999);
+  const startOfDay = new Date(reqStart);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(reqStart);
+  endOfDay.setHours(23, 59, 59, 999);
 
   const dailyBookings = await Booking.find({
     agency: agencyId,
     date: { $gte: startOfDay, $lte: endOfDay },
-    status: { $in: ['Pending', 'Confirmed', 'InProgress'] } 
+    status: { $in: ['Pending', 'Confirmed', 'InProgress'] },
   });
 
   let overlappingBookingsCount = 0;
@@ -215,9 +221,8 @@ const checkAvailability = async (agencyId, requestedDate, durationMinutes) => {
 
 // Récupérer les créneaux disponibles pour une journée donnée
 exports.getAvailableSlots = async (agencyId, dateString, durationMinutes) => {
-
   if (!agencyId || !dateString || isNaN(durationMinutes)) {
-    throw new AppError("Les paramètres agencyId, date, et duration sont requis et valides.", 400);
+    throw new AppError('Les paramètres agencyId, date, et duration sont requis et valides.', 400);
   }
 
   if (!mongoose.Types.ObjectId.isValid(agencyId)) {
@@ -230,20 +235,20 @@ exports.getAvailableSlots = async (agencyId, dateString, durationMinutes) => {
   // 1. Récupérer les horaires d'ouverture de l'agence
   const Agency = require('../models/Agency'); // On l'importe ici ou en haut du fichier
   const agency = await Agency.findById(agencyId);
-  if (!agency) throw new AppError("Agence introuvable.", 404);
+  if (!agency) throw new AppError('Agence introuvable.', 404);
 
   // On cherche les horaires pour ce jour de la semaine
-  const dayHours = agency.openingHours.find(h => h.dayOfWeek === dayOfWeek);
-  
+  const dayHours = agency.openingHours.find((h) => h.dayOfWeek === dayOfWeek);
+
   // Si l'agence est fermée ce jour-là, on renvoie un tableau vide
   if (!dayHours || !dayHours.isOpen) {
-    return []; 
+    return [];
   }
 
   // 2. Convertir les heures d'ouverture (ex: "08:00") en minutes pour faciliter le calcul
   const [openHour, openMinute] = dayHours.openTime.split(':').map(Number);
   const [closeHour, closeMinute] = dayHours.closeTime.split(':').map(Number);
-  
+
   let currentMinutes = openHour * 60 + openMinute;
   const endMinutes = closeHour * 60 + closeMinute;
 
@@ -253,20 +258,22 @@ exports.getAvailableSlots = async (agencyId, dateString, durationMinutes) => {
   // 3. Boucle sur toute la journée
   while (currentMinutes + durationMinutes <= endMinutes) {
     // Reconvertir les minutes en format HH:MM
-    const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+    const h = Math.floor(currentMinutes / 60)
+      .toString()
+      .padStart(2, '0');
     const m = (currentMinutes % 60).toString().padStart(2, '0');
-    
+
     // Créer un objet Date précis pour ce créneau
     const slotTime = new Date(targetDate);
     slotTime.setHours(h, m, 0, 0);
 
     // On s'assure de ne pas proposer des créneaux dans le passé (si le client regarde pour aujourd'hui)
     if (slotTime > new Date()) {
-       // ➔ LA MAGIE EST LÀ : On passe la date dans notre "Entonnoir à 3 filtres"
-       const isAvailable = await checkAvailability(agencyId, slotTime, durationMinutes);
-       if (isAvailable) {
-         availableSlots.push(`${h}:${m}`);
-       }
+      // ➔ LA MAGIE EST LÀ : On passe la date dans notre "Entonnoir à 3 filtres"
+      const isAvailable = await checkAvailability(agencyId, slotTime, durationMinutes);
+      if (isAvailable) {
+        availableSlots.push(`${h}:${m}`);
+      }
     }
 
     // On avance de 30 minutes
