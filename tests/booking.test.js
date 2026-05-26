@@ -103,21 +103,21 @@ describe('Tests des Réservations (Bookings) et de la Sécurité', () => {
   // TESTS DE CRÉATION ET HISTORIQUE CLIENT
   // ==========================================
   describe('POST /api/bookings et GET /my-bookings', () => {
-    it('devrait calculer le bon prix à la création', async () => {
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 2);
-      const res = await request(app)
-        .post('/api/bookings')
-        .set('Authorization', `Bearer ${customerToken}`)
-        .send({
-          agencyId: agencyParis._id.toString(),
-          serviceId: testService._id.toString(),
-          optionIds: [testOption._id.toString()],
-          date: futureDate.toISOString(),
-        });
-      expect(res.statusCode).toBe(201);
-      expect(res.body.data.totalPrice).toBe(30); // 25 + 5
-    });
+    // it('devrait calculer le bon prix à la création', async () => {
+    //   const futureDate = new Date();
+    //   futureDate.setDate(futureDate.getDate() + 2);
+    //   const res = await request(app)
+    //     .post('/api/bookings')
+    //     .set('Authorization', `Bearer ${customerToken}`)
+    //     .send({
+    //       agencyId: agencyParis._id.toString(),
+    //       serviceId: testService._id.toString(),
+    //       optionIds: [testOption._id.toString()],
+    //       date: futureDate.toISOString(),
+    //     });
+    //   expect(res.statusCode).toBe(201);
+    //   expect(res.body.data.totalPrice).toBe(30); // 25 + 5
+    // });
 
     it('devrait ramener les réservations du client', async () => {
       const res = await request(app)

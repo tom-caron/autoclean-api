@@ -17,15 +17,12 @@ const { errorHandler } = require('./src/middlewares/errorMiddleware');
 // Chargement des variables d'environnement
 dotenv.config();
 
-// Connexion à la base de données
-connectDB();
-
 // Initialisation d'Express
 const app = express();
 
 // Middlewares
-app.use(cors()); // Autorise les requêtes de tes futurs fronts Vue.js
-app.use(express.json()); // Permet à ton API de lire les données JSON (formulaires, etc.)
+app.use(cors());
+app.use(express.json());
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth', authRoutes);
@@ -41,8 +38,9 @@ app.use(errorHandler);
 // Définition du port
 const PORT = process.env.PORT || 5000;
 
-// Lancement du serveur
 if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
   });
