@@ -20,8 +20,36 @@ dotenv.config();
 // Initialisation d'Express
 const app = express();
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://autoclean-client.vercel.app',
+  'https://autoclean-crm.vercel.app',
+];
 // Middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Autorise Postman, curl ou requêtes serveur sans origin
+      if (!origin) return callback(null, true);
+
+      // Autorise les domaines exacts
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Autorise aussi les previews Vercel du même projet
+      if (/^https:\/\/autoclean-crm.*\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS bloqué pour l'origine : ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json());
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
