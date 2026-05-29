@@ -1,9 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 const validate = require('../middlewares/validateMiddleware');
 const { registerSchema, loginSchema } = require('../validations/authValidation');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: {
+    message: 'Trop de tentatives de connexion échouées, veuillez réessayer dans 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * @swagger
@@ -81,7 +92,7 @@ router.post('/register', validate(registerSchema), authController.register);
  *       401:
  *         description: Email ou mot de passe incorrect.
  */
-router.post('/login', validate(loginSchema), authController.login);
+router.post('/login', validate(loginSchema), loginLimiter, authController.login);
 
 /**
  * @swagger
