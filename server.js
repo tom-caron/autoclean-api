@@ -1,7 +1,17 @@
-// Importation des dépendances
+require('dotenv').config();
+const Sentry = require('@sentry/node');
+const { nodeProfilingIntegration } = require('@sentry/profiling-node');
 const express = require('express');
+const app = express();
+// 1. Initialisation de Sentry (DOIT se faire AVANT l'import d'Express)
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  integrations: [nodeProfilingIntegration()],
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+});
+
 const cors = require('cors');
-const dotenv = require('dotenv');
 const connectDB = require('./src/config/db');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./src/config/swagger');
@@ -14,18 +24,13 @@ const scheduleRoutes = require('./src/routes/scheduleRoutes');
 const absenceRoutes = require('./src/routes/absenceRoutes');
 const { errorHandler } = require('./src/middlewares/errorMiddleware');
 
-// Chargement des variables d'environnement
-dotenv.config();
-
-// Initialisation d'Express
-const app = express();
-
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://autoclean-client.vercel.app',
   'https://autoclean-crm.vercel.app',
 ];
+
 // Middlewares
 app.use(
   cors({
@@ -50,8 +55,10 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 app.use(express.json());
 
+// Routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth', authRoutes);
 app.use('/api/agencies', agencyRoutes);
@@ -61,6 +68,15 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/absences', absenceRoutes);
 
+// Route de test Sentry
+app.get('/debug-sentry', function mainHandler(req, res) {
+  throw new Error('Erreur 500 : Crash critique du serveur (Simulation pour Monitoring)');
+});
+
+// NOUVEAU Gestionnaire d'erreurs Sentry (DOIT être placé ICI, avant tes middlewares d'erreur)
+Sentry.setupExpressErrorHandler(app);
+
+// Ton middleware d'erreur personnalisé
 app.use(errorHandler);
 
 // Définition du port

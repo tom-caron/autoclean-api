@@ -1,24 +1,31 @@
-// src/middlewares/errorMiddleware.js
+const Sentry = require('@sentry/node');
 
 const errorHandler = (err, req, res, next) => {
-  //console.error(err)
-  // 1. On récupère le statusCode de notre AppError, ou on met 500 par défaut
-  let statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode || (res.statusCode !== 200 ? res.statusCode : 500);
 
-  // Petite sécurité : si par hasard le statut est toujours à 200 (OK) malgré une erreur, on force à 500
-  if (statusCode === 200) {
-    statusCode = 500;
+  // 1. Stratégie de séparation : 404 vs 500
+  if (statusCode === 404) {
+    // Force l'envoi d'un message d'alerte, impossible pour Sentry de l'ignorer
+    Sentry.captureMessage(`[404] Ressource introuvable : ${err.message}`, {
+      level: 'warning', // Apparaîtra en jaune sur le dashboard (ou "error" pour rouge)
+      tags: {
+        status_code: statusCode,
+        type: 'Erreur_Metier',
+      },
+      extra: {
+        url: req.originalUrl,
+        method: req.method,
+      },
+    });
+  } else {
+    // 2. Comportement classique pour les vrais crashs (500)
+    Sentry.captureException(err);
   }
 
-  // 2. On applique le code d'erreur à la réponse HTTP
-  res.status(statusCode);
-
-  // 3. On renvoie notre format JSON standardisé
-  res.json({
+  // 3. Réponse au client
+  res.status(statusCode).json({
     success: false,
-    message: err.message || 'Erreur interne du serveur',
-    // On cache la stack trace en production pour des raisons de sécurité
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    message: err.message || 'Erreur serveur',
   });
 };
 
