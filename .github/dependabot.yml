@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    # Le chemin vers ton package.json. 
+    # Si ton back et ton front sont dans des dossiers séparés sur le même repo,
+    # il faudra dupliquer ce bloc en changeant le "directory" (ex: "/backend" et "/frontend")
+    directory: "/" 
+    schedule:
+      interval: "weekly" # Vérification toutes les semaines
+      day: "monday"      # Le lundi
+      time: "09:00"      # À 9h00
+    open-pull-requests-limit: 5 # Ne pas inonder ton repo de requêtes
