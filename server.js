@@ -59,6 +59,15 @@ app.use(
 app.use(express.json());
 
 // Routes
+// Route de Health Check pour UptimeRobot
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth', authRoutes);
 app.use('/api/agencies', agencyRoutes);
